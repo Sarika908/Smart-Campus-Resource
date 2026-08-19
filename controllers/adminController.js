@@ -1,6 +1,46 @@
 const User = require("../models/User");
 const Resource = require("../models/Resource");
 const Booking = require("../models/Booking");
+const { runReturnDeadlineCheck } = require("../utils/reminderJob");
+
+// @desc   Admin creates a new user account (Student / Faculty / Staff / Admin)
+//         with a chosen email (user id) and password.
+// @route  POST /api/admin/create-user
+// @access Private/Admin
+const createUserByAdmin = async (req, res) => {
+  try {
+    const { name, email, password, role, department, phone } = req.body;
+
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ message: "name, email, password and role are required" });
+    }
+
+    const allowedRoles = ["Student", "Faculty", "Staff", "Admin"];
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ message: `role must be one of: ${allowedRoles.join(", ")}` });
+    }
+
+    const exists = await User.findOne({ email });
+    if (exists) {
+      return res.status(400).json({ message: "A user with this email already exists" });
+    }
+
+    // password is hashed automatically by the User model's pre-save hook
+    const user = await User.create({ name, email, password, role, department, phone });
+
+    res.status(201).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+      phone: user.phone,
+      message: `${role} account created successfully by Admin`,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 
 // @desc   Get all users
 // @route  GET /api/admin/users
@@ -13,6 +53,7 @@ const getAllUsers = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 // @desc   Activate/deactivate a user or change role
 // @route  PUT /api/admin/users/:id
@@ -134,10 +175,24 @@ const getAnalytics = async (req, res) => {
   }
 };
 
+// @desc   Manually trigger the return-deadline reminder check (for testing/demo)
+// @route  POST /api/admin/trigger-reminders
+// @access Private/Admin
+const triggerReminders = async (req, res) => {
+  try {
+    await runReturnDeadlineCheck();
+    res.json({ message: "Reminder check executed. See notifications for affected users." });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 module.exports = {
+  createUserByAdmin,
   getAllUsers,
   updateUser,
   deleteUser,
   getAllBookings,
   getAnalytics,
+  triggerReminders,
 };
