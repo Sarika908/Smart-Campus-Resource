@@ -94,12 +94,46 @@ smart-campus-backend/
 ### Admin (`/api/admin`) — all require Admin role
 | Method | Endpoint | Description |
 |---|---|---|
+| POST | /create-user | Admin creates a Student/Faculty/Staff/Admin account (sets email/id and password directly) |
 | GET | /users | List all users |
 | PUT | /users/:id | Change role / activate-deactivate user |
 | DELETE | /users/:id | Remove a user |
 | GET | /bookings | View all bookings platform-wide |
 | GET | /analytics | Dashboard stats: totals, bookings by status, resources by category, users by role, most requested resources |
 | POST | /trigger-reminders | Manually run the return-deadline reminder check (for testing/demo) |
+
+## Creating Users
+
+There are two ways to create accounts:
+
+**1. Self-registration (public)** — anyone can register themselves:
+```
+POST /api/auth/register
+{ "name": "...", "email": "...", "password": "...", "role": "Student" }
+```
+
+**2. Admin-created accounts** — an Admin creates accounts for Student/Faculty/Staff
+(or another Admin) and hands out the id/password:
+```
+POST /api/admin/create-user   (needs Admin Bearer token)
+{ "name": "...", "email": "...", "password": "...", "role": "Faculty" }
+```
+
+**3. Seed script** — creates one default user per role directly in MongoDB, for quick testing:
+```bash
+npm run seed
+```
+This creates:
+| Role | Email (user id) | Password |
+|---|---|---|
+| Admin | admin@campus.edu | admin123 |
+| Student | student@campus.edu | student123 |
+| Faculty | faculty@campus.edu | faculty123 |
+| Staff | staff@campus.edu | staff123 |
+
+Safe to run more than once — it skips any email that already exists instead of duplicating.
+Change these values in `scripts/seedUsers.js` before running if you want different
+credentials. **Change these passwords before using outside of local testing.**
 
 ## Return Deadline Reminders (Real-time Trigger)
 `utils/reminderJob.js` uses **node-cron** to run automatically every day at 8:00 AM.
